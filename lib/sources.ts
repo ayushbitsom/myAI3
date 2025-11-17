@@ -112,15 +112,13 @@ export function getContextFromSource(
 ): string {
     return `
     <excerpt-from-source>
-
-    Source Description: ${source.source_description}
-
-    Source Citation: [${citationNumber}](${source.source_url})
-
-    Excerpt from Source [${citationNumber}]:
-
+    # Source ${citationNumber}
+    ## Source Description
+    ${source.source_description}
+    ## Source Citation
+    If you use this source, cite it using a markdown link with the source number as the link text, as follows: [${citationNumber}](${source.source_url})
+    ## Excerpt from Source
     ${buildContextFromOrderedChunks(source.chunks, citationNumber)}
-
     </excerpt-from-source>
   `;
 }
