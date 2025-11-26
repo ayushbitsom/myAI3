@@ -78,19 +78,19 @@ const saveMessagesToStorage = (
 const QUICK_START_QUESTIONS: { label: string; text: string }[] = [
   {
     label: "Create a 1-week Instagram plan for my bakery",
-    text: "Create a 1-week Instagram content plan for my neighborhood bakery, including post ideas, captions, and basic hashtags.",
+    text: "Create a detailed 1-week Instagram content plan for my neighborhood bakery, including post ideas, captions, and basic hashtags. Focus only on digital marketing tactics.",
   },
   {
-    label: "How should I use a ₹10,000 monthly budget?",
-    text: "I have a ₹10,000 monthly marketing budget for my small business. How should I split it between ads, content, and email?",
+    label: "Use a ₹10,000 digital marketing budget wisely",
+    text: "I have a ₹10,000 monthly DIGITAL MARKETING budget for my small business. Propose a split across online channels like paid ads, social media content, email/WhatsApp marketing, and SEO, with clear percentages and reasoning.",
   },
   {
     label: "Write a welcome email for new customers",
-    text: "Write a warm, friendly welcome email for new customers joining my mailing list for a small local service business.",
+    text: "Write a warm, friendly welcome email for new customers who joined my email list after seeing my online ads or social media posts. Keep it short and marketing-focused.",
   },
   {
     label: "5 Google My Business post ideas for a café",
-    text: "Give me 5 Google My Business post ideas for a local café to increase footfall and reviews.",
+    text: "Give me 5 Google My Business (Google Business Profile) post ideas for a local café to increase visits, reviews, and online visibility. Focus only on digital marketing ideas.",
   },
 ];
 
@@ -183,9 +183,9 @@ export default function Chat() {
   return (
     <div className="flex h-screen items-center justify-center font-sans dark:bg-black">
       <main className="w-full dark:bg-black h-screen relative">
-        {/* Top header */}
-        <div className="fixed top-0 left-0 right-0 z-50 bg-linear-to-b from-background via-background/60 to-transparent dark:bg-black/95 overflow-visible pb-6 border-b border-border/40">
-          <div className="relative overflow-visible">
+        {/* Top header (scrolls away, not fixed) */}
+        <div className="w-full bg-background dark:bg-black border-b border-border/40">
+          <div className="relative overflow-visible py-3">
             <ChatHeader>
               <ChatHeaderBlock />
               <ChatHeaderBlock className="justify-center items-center gap-3">
@@ -220,7 +220,7 @@ export default function Chat() {
         </div>
 
         {/* Scrollable content */}
-        <div className="h-screen overflow-y-auto px-5 py-4 w-full pt-[112px] pb-[170px] bg-gradient-to-b from-background via-background to-muted/40">
+        <div className="h-screen overflow-y-auto px-5 py-4 w-full pt-6 pb-[170px] bg-gradient-to-b from-background via-background to-muted/40">
           <div className="flex flex-col items-center justify-start min-h-full gap-6">
             {/* Hero / marketing card */}
             <section className="w-full max-w-3xl">
@@ -243,17 +243,27 @@ export default function Chat() {
                     <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                       <li>SEO &amp; local search visibility</li>
                       <li>Instagram &amp; Facebook content calendars</li>
-                      <li>Email campaigns and WhatsApp broadcasts</li>
-                      <li>Simple ads that fit a small budget</li>
+                      <li>Email and WhatsApp campaigns</li>
+                      <li>Simple paid ads for small budgets</li>
                     </ul>
                   </div>
                   <div>
-                    <h2 className="font-semibold mb-1.5">Great first questions:</h2>
+                    <h2 className="font-semibold mb-1.5">
+                      Great first questions:
+                    </h2>
                     <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                      <li>Create a 1-week IG plan for my bakery</li>
-                      <li>How do I spend ₹10k/month wisely?</li>
-                      <li>Explain SEO vs. running ads</li>
-                      <li>Ideas to get more reviews online</li>
+                      <li>
+                        Create a 1-week Instagram plan for my small business
+                      </li>
+                      <li>
+                        How should I use a ₹10k/month digital marketing budget?
+                      </li>
+                      <li>
+                        Explain SEO vs. running online ads for my business
+                      </li>
+                      <li>
+                        Ideas to get more Google reviews and online visibility
+                      </li>
                     </ul>
                   </div>
                 </div>
@@ -261,7 +271,8 @@ export default function Chat() {
                 {!hasUserMessages && (
                   <p className="text-xs text-muted-foreground pt-1">
                     Tip: Click one of the suggestions below, or ask in simple
-                    language like you’re texting a friend.
+                    language like you’re texting a friend. Everything is focused
+                    on digital marketing.
                   </p>
                 )}
               </div>
@@ -297,22 +308,24 @@ export default function Chat() {
           <div className="w-full px-5 pb-2 flex flex-col items-center gap-3 relative overflow-visible">
             <div className="message-fade-overlay" />
 
-            {/* Quick-start chips */}
-            <div className="max-w-3xl w-full flex flex-wrap gap-2 justify-center mb-1">
-              {QUICK_START_QUESTIONS.map((q) => (
-                <Button
-                  key={q.label}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full text-xs sm:text-[13px] px-3 py-1 h-auto whitespace-normal leading-snug"
-                  onClick={() => handleQuickQuestion(q.text)}
-                  disabled={status === "streaming" || status === "submitted"}
-                >
-                  {q.label}
-                </Button>
-              ))}
-            </div>
+            {/* Quick-start chips – only BEFORE first user message */}
+            {!hasUserMessages && (
+              <div className="max-w-3xl w-full flex flex-wrap gap-2 justify-center mb-1">
+                {QUICK_START_QUESTIONS.map((q) => (
+                  <Button
+                    key={q.label}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full text-xs sm:text-[13px] px-3 py-1 h-auto whitespace-normal leading-snug"
+                    onClick={() => handleQuickQuestion(q.text)}
+                    disabled={status === "streaming" || status === "submitted"}
+                  >
+                    {q.label}
+                  </Button>
+                ))}
+              </div>
+            )}
 
             {/* Input bar */}
             <div className="max-w-3xl w-full">
@@ -334,7 +347,7 @@ export default function Chat() {
                             {...field}
                             id="chat-form-message"
                             className="h-15 pr-15 pl-5 bg-card rounded-[20px] shadow-sm border border-border/70"
-                            placeholder="Ask me anything about your small business marketing (SEO, social, ads, email)…"
+                            placeholder="Ask me anything about your small business DIGITAL marketing (SEO, social, ads, email)…"
                             disabled={status === "streaming"}
                             aria-invalid={fieldState.invalid}
                             autoComplete="off"
