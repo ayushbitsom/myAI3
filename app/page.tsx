@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useChat } from "@ai-sdk/react";
-import { ArrowUp, Loader2, Plus, Square, Sparkles, Moon, Sun, Zap, Shield, TrendingUp, MessageSquare } from "lucide-react";
+import { ArrowUp, Loader2, Plus, Square, Sparkles, Moon, Sun, Zap, Shield, TrendingUp } from "lucide-react";
 import { MessageWall } from "@/components/messages/message-wall";
 import { ChatHeader, ChatHeaderBlock } from "@/app/parts/chat-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -121,9 +121,9 @@ export default function Chat() {
   const [durations, setDurations] = useState<Record<string, number>>({});
   const [isScrolled, setIsScrolled] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [messageCount, setMessageCount] = useState(0);
   const welcomeMessageShownRef = useRef<boolean>(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const stored =
     typeof window !== "undefined"
@@ -149,7 +149,6 @@ export default function Chat() {
   useEffect(() => {
     if (isClient) {
       saveMessagesToStorage(messages, durations);
-      setMessageCount(messages.filter(m => m.role === "user").length);
     }
   }, [durations, messages, isClient]);
 
@@ -216,6 +215,7 @@ export default function Chat() {
 
   function handleSubmitWrapper(e?: React.FormEvent) {
     if (e) e.preventDefault();
+    // Allow submission even while streaming
     form.handleSubmit(onSubmit)();
   }
 
@@ -280,14 +280,6 @@ export default function Chat() {
                       <Sun className="size-3.5 text-yellow-400 group-hover:text-yellow-300 transition-colors" />
                     )}
                   </Button>
-                  
-                  {/* Message counter badge */}
-                  {messageCount > 0 && (
-                    <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 dark:bg-primary/20 rounded-full border border-primary/20">
-                      <MessageSquare className="size-3 text-primary" />
-                      <span className="text-xs font-bold text-primary">{messageCount}</span>
-                    </div>
-                  )}
                 </div>
               </ChatHeaderBlock>
               
@@ -372,54 +364,54 @@ export default function Chat() {
                     </p>
                   </div>
 
-                  {/* Compact Two-column features */}
+                  {/* Compact Two-column features with FIXED bullet alignment */}
                   <div className="grid gap-3 sm:grid-cols-2 text-xs">
                     <div className="space-y-2 p-3 bg-gray-50/50 dark:bg-gray-800/30 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
                       <h2 className="font-bold text-xs mb-2 flex items-center gap-1.5 text-gray-900 dark:text-white">
-                        <span className="size-1.5 rounded-full bg-primary animate-pulse"></span>
+                        <span className="size-1.5 rounded-full bg-primary animate-pulse flex-shrink-0"></span>
                         I can help you with:
                       </h2>
-                      <ul className="space-y-1.5 text-gray-700 dark:text-gray-300">
-                        <li className="flex items-start gap-2 group">
-                          <span className="text-primary mt-0.5 text-sm group-hover:scale-125 transition-transform flex-shrink-0">•</span>
-                          <span className="font-medium">SEO &amp; local search</span>
+                      <ul className="space-y-1.5">
+                        <li className="flex items-start gap-2 text-gray-700 dark:text-gray-300 group">
+                          <span className="text-primary mt-[2px] text-sm group-hover:scale-125 transition-transform flex-shrink-0 leading-none">•</span>
+                          <span className="font-medium leading-snug">SEO &amp; local search</span>
                         </li>
-                        <li className="flex items-start gap-2 group">
-                          <span className="text-primary mt-0.5 text-sm group-hover:scale-125 transition-transform flex-shrink-0">•</span>
-                          <span className="font-medium">Social media calendars</span>
+                        <li className="flex items-start gap-2 text-gray-700 dark:text-gray-300 group">
+                          <span className="text-primary mt-[2px] text-sm group-hover:scale-125 transition-transform flex-shrink-0 leading-none">•</span>
+                          <span className="font-medium leading-snug">Social media calendars</span>
                         </li>
-                        <li className="flex items-start gap-2 group">
-                          <span className="text-primary mt-0.5 text-sm group-hover:scale-125 transition-transform flex-shrink-0">•</span>
-                          <span className="font-medium">Email &amp; WhatsApp campaigns</span>
+                        <li className="flex items-start gap-2 text-gray-700 dark:text-gray-300 group">
+                          <span className="text-primary mt-[2px] text-sm group-hover:scale-125 transition-transform flex-shrink-0 leading-none">•</span>
+                          <span className="font-medium leading-snug">Email &amp; WhatsApp campaigns</span>
                         </li>
-                        <li className="flex items-start gap-2 group">
-                          <span className="text-primary mt-0.5 text-sm group-hover:scale-125 transition-transform flex-shrink-0">•</span>
-                          <span className="font-medium">Paid ads for small budgets</span>
+                        <li className="flex items-start gap-2 text-gray-700 dark:text-gray-300 group">
+                          <span className="text-primary mt-[2px] text-sm group-hover:scale-125 transition-transform flex-shrink-0 leading-none">•</span>
+                          <span className="font-medium leading-snug">Paid ads for small budgets</span>
                         </li>
                       </ul>
                     </div>
                     
                     <div className="space-y-2 p-3 bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/20 dark:border-primary/30">
                       <h2 className="font-bold text-xs mb-2 flex items-center gap-1.5 text-gray-900 dark:text-white">
-                        <span className="size-1.5 rounded-full bg-primary animate-pulse"></span>
+                        <span className="size-1.5 rounded-full bg-primary animate-pulse flex-shrink-0"></span>
                         Great first questions:
                       </h2>
-                      <ul className="space-y-1.5 text-gray-700 dark:text-gray-300">
-                        <li className="flex items-start gap-2 group">
-                          <span className="text-primary mt-0.5 text-sm group-hover:scale-125 transition-transform flex-shrink-0">•</span>
-                          <span className="font-medium">Instagram plan for my business</span>
+                      <ul className="space-y-1.5">
+                        <li className="flex items-start gap-2 text-gray-700 dark:text-gray-300 group">
+                          <span className="text-primary mt-[2px] text-sm group-hover:scale-125 transition-transform flex-shrink-0 leading-none">•</span>
+                          <span className="font-medium leading-snug">Instagram plan for my business</span>
                         </li>
-                        <li className="flex items-start gap-2 group">
-                          <span className="text-primary mt-0.5 text-sm group-hover:scale-125 transition-transform flex-shrink-0">•</span>
-                          <span className="font-medium">Use ₹10k/month budget</span>
+                        <li className="flex items-start gap-2 text-gray-700 dark:text-gray-300 group">
+                          <span className="text-primary mt-[2px] text-sm group-hover:scale-125 transition-transform flex-shrink-0 leading-none">•</span>
+                          <span className="font-medium leading-snug">Use ₹10k/month budget</span>
                         </li>
-                        <li className="flex items-start gap-2 group">
-                          <span className="text-primary mt-0.5 text-sm group-hover:scale-125 transition-transform flex-shrink-0">•</span>
-                          <span className="font-medium">SEO vs. online ads</span>
+                        <li className="flex items-start gap-2 text-gray-700 dark:text-gray-300 group">
+                          <span className="text-primary mt-[2px] text-sm group-hover:scale-125 transition-transform flex-shrink-0 leading-none">•</span>
+                          <span className="font-medium leading-snug">SEO vs. online ads</span>
                         </li>
-                        <li className="flex items-start gap-2 group">
-                          <span className="text-primary mt-0.5 text-sm group-hover:scale-125 transition-transform flex-shrink-0">•</span>
-                          <span className="font-medium">More Google reviews</span>
+                        <li className="flex items-start gap-2 text-gray-700 dark:text-gray-300 group">
+                          <span className="text-primary mt-[2px] text-sm group-hover:scale-125 transition-transform flex-shrink-0 leading-none">•</span>
+                          <span className="font-medium leading-snug">More Google reviews</span>
                         </li>
                       </ul>
                     </div>
@@ -505,7 +497,7 @@ export default function Chat() {
               </div>
             )}
 
-            {/* Compact Input bar */}
+            {/* Compact Input bar - ENABLED even while streaming */}
             <div className="w-full">
               <div id="chat-form">
                 <FieldGroup>
@@ -523,10 +515,11 @@ export default function Chat() {
                         <div className="relative">
                           <Input
                             {...field}
+                            ref={inputRef}
                             id="chat-form-message"
-                            className="h-12 pr-16 pl-5 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-[20px] shadow-xl border-2 border-gray-300/60 dark:border-gray-700/60 focus:border-primary/60 dark:focus:border-primary/50 focus:shadow-primary/20 dark:focus:shadow-primary/30 transition-all duration-300 hover:shadow-xl hover:border-primary/40 dark:hover:border-primary/40 text-sm font-medium placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                            className="h-12 pr-16 pl-5 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-[20px] shadow-xl border-2 border-gray-300/60 dark:border-gray-600/60 focus:border-primary/60 dark:focus:border-primary/50 focus:shadow-primary/20 dark:focus:shadow-primary/30 transition-all duration-300 hover:shadow-xl hover:border-primary/40 dark:hover:border-primary/40 text-sm font-medium placeholder:text-gray-500 dark:placeholder:text-gray-400 text-gray-900 dark:text-gray-100"
                             placeholder="Ask about digital marketing (SEO, social, ads, email)…"
-                            disabled={status === "streaming"}
+                            disabled={false}
                             aria-invalid={fieldState.invalid}
                             autoComplete="off"
                             onKeyDown={(e) => {
@@ -536,7 +529,7 @@ export default function Chat() {
                               }
                             }}
                           />
-                          {(status === "ready" || status === "error") && (
+                          {(status === "ready" || status === "error" || status === "streaming") && (
                             <Button
                               className="absolute right-2 top-2 rounded-full shadow-lg hover:shadow-xl hover:scale-110 active:scale-95 transition-all duration-200 size-8 bg-gradient-to-r from-primary to-primary/90"
                               type="button"
@@ -547,8 +540,7 @@ export default function Chat() {
                               <ArrowUp className="size-4 font-bold" />
                             </Button>
                           )}
-                          {(status === "streaming" ||
-                            status === "submitted") && (
+                          {status === "submitted" && (
                             <Button
                               className="absolute right-2 top-2 rounded-full shadow-lg hover:shadow-xl hover:scale-110 active:scale-95 transition-all duration-200 size-8"
                               size="icon"
