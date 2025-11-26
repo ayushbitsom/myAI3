@@ -24,8 +24,6 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 
-// ----------------- form + storage schema -----------------
-
 const formSchema = z.object({
   message: z
     .string()
@@ -73,29 +71,6 @@ const saveMessagesToStorage = (
   }
 };
 
-// ----------------- quick-start questions -----------------
-
-const QUICK_START_QUESTIONS: { label: string; text: string }[] = [
-  {
-    label: "Create a 1-week Instagram plan for my bakery",
-    text: "Create a detailed 1-week Instagram content plan for my neighborhood bakery, including post ideas, captions, and basic hashtags. Focus only on digital marketing tactics.",
-  },
-  {
-    label: "Use a ₹10,000 digital marketing budget wisely",
-    text: "I have a ₹10,000 monthly DIGITAL MARKETING budget for my small business. Propose a split across online channels like paid ads, social media content, email/WhatsApp marketing, and SEO, with clear percentages and reasoning.",
-  },
-  {
-    label: "Write a welcome email for new customers",
-    text: "Write a warm, friendly welcome email for new customers who joined my email list after seeing my online ads or social media posts. Keep it short and marketing-focused.",
-  },
-  {
-    label: "5 Google My Business post ideas for a café",
-    text: "Give me 5 Google My Business (Google Business Profile) post ideas for a local café to increase visits, reviews, and online visibility. Focus only on digital marketing ideas.",
-  },
-];
-
-// ----------------- main component -----------------
-
 export default function Chat() {
   const [isClient, setIsClient] = useState(false);
   const [durations, setDurations] = useState<Record<string, number>>({});
@@ -105,7 +80,6 @@ export default function Chat() {
     typeof window !== "undefined"
       ? loadMessagesFromStorage()
       : { messages: [], durations: {} };
-
   const [initialMessages] = useState<UIMessage[]>(stored.messages);
 
   const { messages, sendMessage, status, stop, setMessages } = useChat({
@@ -126,16 +100,16 @@ export default function Chat() {
   }, [durations, messages, isClient]);
 
   const handleDurationChange = (key: string, duration: number) => {
-    setDurations((prev) => ({ ...prev, [key]: duration }));
+    setDurations((prevDurations) => {
+      const newDurations = { ...prevDurations };
+      newDurations[key] = duration;
+      return newDurations;
+    });
   };
 
-  // initial assistant message
+  // Show welcome message only once, when there is no previous chat
   useEffect(() => {
-    if (
-      isClient &&
-      initialMessages.length === 0 &&
-      !welcomeMessageShownRef.current
-    ) {
+    if (isClient && initialMessages.length === 0 && !welcomeMessageShownRef.current) {
       const welcomeMessage: UIMessage = {
         id: `welcome-${Date.now()}`,
         role: "assistant",
@@ -160,46 +134,64 @@ export default function Chat() {
   });
 
   function onSubmit(data: z.infer<typeof formSchema>) {
-    if (!data.message.trim()) return;
     sendMessage({ text: data.message });
     form.reset();
   }
 
   function clearChat() {
     const newMessages: UIMessage[] = [];
-    const newDurations: Record<string, number> = {};
+    const newDurations = {};
     setMessages(newMessages);
     setDurations(newDurations);
     saveMessagesToStorage(newMessages, newDurations);
     toast.success("Chat cleared");
   }
 
-  function handleQuickQuestion(text: string) {
-    sendMessage({ text });
-  }
+  // --- NEW: digital-marketing focused quick prompts and hero content ---
 
-  const hasUserMessages = messages.some((m) => m.role === "user");
+  const suggestedPrompts = [
+    "Create a 1-week Instagram plan for my bakery",
+    "Plan a ₹10,000 digital marketing budget for my small business",
+    "Write a welcome email for new customers",
+    "Give me 5 post ideas for my café’s Google Business Profile",
+  ];
+
+  const helpPoints = [
+    "SEO & local search visibility for your shop or service",
+    "Instagram & Facebook content calendars that fit your budget",
+    "Simple email and WhatsApp campaigns to nurture customers",
+    "Easy paid ads for small monthly budgets (Google, Meta, etc.)",
+  ];
+
+  const greatQuestions = [
+    "Plan a 1-week Instagram content calendar for my small business",
+    "How should I spend a ₹10k/month budget on digital marketing?",
+    "SEO vs online ads – which is better for my local business?",
+    "How can I get more Google reviews and local online visibility?",
+  ];
+
+  const hasStartedChat = messages.some((m) => m.role === "user");
 
   return (
     <div className="flex h-screen items-center justify-center font-sans dark:bg-black">
       <main className="w-full dark:bg-black h-screen relative">
-        {/* Top header (scrolls away, not fixed) */}
-        <div className="w-full bg-background dark:bg-black border-b border-border/40">
-          <div className="relative overflow-visible py-3">
+        {/* HEADER */}
+        <div className="fixed top-0 left-0 right-0 z-50 bg-linear-to-b from-background via-background/50 to-transparent dark:bg-black overflow-visible pb-4 border-b border-border/40">
+          <div className="relative overflow-visible">
             <ChatHeader>
               <ChatHeaderBlock />
-              <ChatHeaderBlock className="justify-center items-center gap-3">
-                <Avatar className="size-9 ring-2 ring-primary/70 shadow-sm">
+              <ChatHeaderBlock className="justify-center items-center gap-2">
+                <Avatar className="size-8 ring-1 ring-primary">
                   <AvatarImage src="/logo.png" />
                   <AvatarFallback>
                     <Image src="/logo.png" alt="Logo" width={36} height={36} />
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col leading-tight">
-                  <p className="tracking-tight font-semibold">
+                  <p className="tracking-tight text-sm font-medium">
                     Chat with {AI_NAME}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[11px] text-muted-foreground">
                     Digital Marketing Copilot for Small Businesses
                   </p>
                 </div>
@@ -208,7 +200,7 @@ export default function Chat() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="cursor-pointer gap-1"
+                  className="cursor-pointer"
                   onClick={clearChat}
                 >
                   <Plus className="size-4" />
@@ -219,67 +211,64 @@ export default function Chat() {
           </div>
         </div>
 
-        {/* Scrollable content */}
-        <div className="h-screen overflow-y-auto px-5 py-4 w-full pt-6 pb-[170px] bg-gradient-to-b from-background via-background to-muted/40">
-          <div className="flex flex-col items-center justify-start min-h-full gap-6">
-            {/* Hero / marketing card */}
-            <section className="w-full max-w-3xl">
-              <div className="bg-card border border-border/60 rounded-3xl shadow-sm px-6 sm:px-8 py-6 sm:py-7 space-y-4">
-                <div>
-                  <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
-                    MyAI3 – Digital Marketing Copilot for Small Businesses
-                  </h1>
-                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                    Get practical, step-by-step help with your online marketing.
-                    I’m trained on books, reports, and trend studies about
-                    digital marketing – especially for small and local
-                    businesses.
-                  </p>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2 text-sm">
-                  <div>
-                    <h2 className="font-semibold mb-1.5">I can help you with:</h2>
-                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                      <li>SEO &amp; local search visibility</li>
-                      <li>Instagram &amp; Facebook content calendars</li>
-                      <li>Email and WhatsApp campaigns</li>
-                      <li>Simple paid ads for small budgets</li>
-                    </ul>
+        {/* MAIN SCROLL AREA */}
+        <div className="h-screen overflow-y-auto px-5 py-4 w-full pt-[104px] pb-[150px]">
+          <div className="flex flex-col items-center justify-start min-h-full gap-4">
+            {/* HERO CARD – only when chat has not started */}
+            {isClient && !hasStartedChat && (
+              <section className="w-full flex justify-center">
+                <div className="max-w-4xl w-full rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
+                  <div className="grid md:grid-cols-2 gap-6 md:gap-10 items-start">
+                    <div className="space-y-3">
+                      <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
+                        MyAI3 – Digital Marketing Copilot for Small Businesses
+                      </h1>
+                      <p className="text-sm md:text-base text-muted-foreground">
+                        Get practical, step-by-step help with your online marketing. I’m
+                        trained on books, reports, and trend studies about digital
+                        marketing – especially for small and local businesses.
+                      </p>
+                      <div className="space-y-2">
+                        <p className="font-semibold text-sm md:text-base">
+                          I can help you with:
+                        </p>
+                        <ul className="space-y-1.5">
+                          {helpPoints.map((point) => (
+                            <li
+                              key={point}
+                              className="flex items-start gap-2 text-sm text-muted-foreground"
+                            >
+                              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+                              <span>{point}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="font-semibold text-sm md:text-base">
+                        Great first questions:
+                      </p>
+                      <ul className="space-y-1.5">
+                        {greatQuestions.map((q) => (
+                          <li
+                            key={q}
+                            className="flex items-start gap-2 text-sm text-muted-foreground"
+                          >
+                            <span className="mt-1 h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+                            {/* Force each question to stay on a single line */}
+                            <span className="whitespace-nowrap">{q}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="font-semibold mb-1.5">
-                      Great first questions:
-                    </h2>
-                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                      <li>
-                        Create a 1-week Instagram plan for my small business
-                      </li>
-                      <li>
-                        How should I use a ₹10k/month digital marketing budget?
-                      </li>
-                      <li>
-                        Explain SEO vs. running online ads for my business
-                      </li>
-                      <li>
-                        Ideas to get more Google reviews and online visibility
-                      </li>
-                    </ul>
-                  </div>
                 </div>
+              </section>
+            )}
 
-                {!hasUserMessages && (
-                  <p className="text-xs text-muted-foreground pt-1">
-                    Tip: Click one of the suggestions below, or ask in simple
-                    language like you’re texting a friend. Everything is focused
-                    on digital marketing.
-                  </p>
-                )}
-              </div>
-            </section>
-
-            {/* Messages */}
-            <section className="w-full max-w-3xl flex flex-col gap-3">
+            {/* CHAT MESSAGES */}
+            <div className="flex flex-col items-center justify-end w-full max-w-3xl">
               {isClient ? (
                 <>
                   <MessageWall
@@ -295,39 +284,34 @@ export default function Chat() {
                   )}
                 </>
               ) : (
-                <div className="flex justify-center max-w-2xl w-full py-4">
+                <div className="flex justify-center max-w-2xl w-full">
                   <Loader2 className="size-4 animate-spin text-muted-foreground" />
                 </div>
               )}
-            </section>
+            </div>
           </div>
         </div>
 
-        {/* Input + quick-start buttons */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-linear-to-t from-background via-background/70 to-transparent dark:bg-black overflow-visible pt-4">
-          <div className="w-full px-5 pb-2 flex flex-col items-center gap-3 relative overflow-visible">
-            <div className="message-fade-overlay" />
-
-            {/* Quick-start chips – only BEFORE first user message */}
-            {!hasUserMessages && (
-              <div className="max-w-3xl w-full flex flex-wrap gap-2 justify-center mb-1">
-                {QUICK_START_QUESTIONS.map((q) => (
-                  <Button
-                    key={q.label}
+        {/* INPUT + QUICK PROMPTS */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-linear-to-t from-background via-background/70 to-transparent dark:bg-black/95 pt-4">
+          <div className="w-full px-5 pt-2 pb-1 flex flex-col items-center gap-3">
+            {/* Quick suggestion chips – only before first user message */}
+            {isClient && !hasStartedChat && (
+              <div className="max-w-3xl w-full flex flex-wrap justify-center gap-2 pb-1">
+                {suggestedPrompts.map((prompt) => (
+                  <button
+                    key={prompt}
                     type="button"
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full text-xs sm:text-[13px] px-3 py-1 h-auto whitespace-normal leading-snug"
-                    onClick={() => handleQuickQuestion(q.text)}
-                    disabled={status === "streaming" || status === "submitted"}
+                    className="px-4 py-2 rounded-full border bg-card text-xs md:text-sm hover:bg-accent transition text-muted-foreground"
+                    onClick={() => sendMessage({ text: prompt })}
                   >
-                    {q.label}
-                  </Button>
+                    {prompt}
+                  </button>
                 ))}
               </div>
             )}
 
-            {/* Input bar */}
+            <div className="message-fade-overlay" />
             <div className="max-w-3xl w-full">
               <form id="chat-form" onSubmit={form.handleSubmit(onSubmit)}>
                 <FieldGroup>
@@ -346,8 +330,8 @@ export default function Chat() {
                           <Input
                             {...field}
                             id="chat-form-message"
-                            className="h-15 pr-15 pl-5 bg-card rounded-[20px] shadow-sm border border-border/70"
-                            placeholder="Ask me anything about your small business DIGITAL marketing (SEO, social, ads, email)…"
+                            className="h-15 pr-15 pl-5 bg-card rounded-[20px]"
+                            placeholder="Ask me anything about your small business marketing (SEO, social, ads, email)…"
                             disabled={status === "streaming"}
                             aria-invalid={fieldState.invalid}
                             autoComplete="off"
@@ -368,8 +352,7 @@ export default function Chat() {
                               <ArrowUp className="size-4" />
                             </Button>
                           )}
-                          {(status === "streaming" ||
-                            status === "submitted") && (
+                          {(status === "streaming" || status === "submitted") && (
                             <Button
                               className="absolute right-2 top-2 rounded-full"
                               size="icon"
@@ -389,9 +372,7 @@ export default function Chat() {
               </form>
             </div>
           </div>
-
-          {/* Footer */}
-          <div className="w-full px-5 py-3 items-center flex justify-center text-xs text-muted-foreground bg-background/80 backdrop-blur">
+          <div className="w-full px-5 py-3 items-center flex justify-center text-xs text-muted-foreground">
             © {new Date().getFullYear()} {OWNER_NAME}&nbsp;
             <Link href="/terms" className="underline">
               Terms of Use
