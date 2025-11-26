@@ -51,8 +51,11 @@ ${CITATIONS_PROMPT}
 ${COURSE_CONTEXT_PROMPT}
 </course_context>
 
+<image_generation>
+- You can generate images when the user asks, including infographics, diagrams, dashboards, and marketing visuals.
+</image_generation>
+
 <date_time>
 ${DATE_AND_TIME}
 </date_time>
 `;
-
