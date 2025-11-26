@@ -6,28 +6,26 @@ import { toast } from "sonner";
 import * as z from "zod";
 
 import { Button } from "@/components/ui/button";
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useChat } from "@ai-sdk/react";
-import { ArrowUp, Loader2, Square } from "lucide-react";
+import { ArrowUp, Loader2, Plus, Square } from "lucide-react";
 import { MessageWall } from "@/components/messages/message-wall";
-import { ChatHeader } from "@/app/parts/chat-header";
-import { ChatHeaderBlock } from "@/app/parts/chat-header";
+import { ChatHeader, ChatHeaderBlock } from "@/app/parts/chat-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UIMessage } from "ai";
 import { useEffect, useState, useRef } from "react";
-import { AI_NAME, CLEAR_CHAT_TEXT, OWNER_NAME } from "@/config";
+import {
+  AI_NAME,
+  CLEAR_CHAT_TEXT,
+  OWNER_NAME,
+  WELCOME_MESSAGE,
+} from "@/config";
 import Image from "next/image";
 import Link from "next/link";
 
+// ----------------- form + storage schema -----------------
 
-// ------------------------------
-// FORM VALIDATION
-// ------------------------------
 const formSchema = z.object({
   message: z
     .string()
@@ -35,297 +33,375 @@ const formSchema = z.object({
     .max(2000, "Message must be at most 2000 characters."),
 });
 
-
-// ------------------------------
-// LOCAL STORAGE CHAT PERSISTENCE
-// ------------------------------
-const STORAGE_KEY = 'chat-messages';
+const STORAGE_KEY = "chat-messages";
 
 type StorageData = {
   messages: UIMessage[];
   durations: Record<string, number>;
 };
 
-const loadMessagesFromStorage = (): StorageData => {
-  if (typeof window === 'undefined') return { messages: [], durations: {} };
+const loadMessagesFromStorage = (): {
+  messages: UIMessage[];
+  durations: Record<string, number>;
+} => {
+  if (typeof window === "undefined") return { messages: [], durations: {} };
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return { messages: [], durations: {} };
-    return JSON.parse(stored);
-  } catch {
+
+    const parsed = JSON.parse(stored);
+    return {
+      messages: parsed.messages || [],
+      durations: parsed.durations || {},
+    };
+  } catch (error) {
+    console.error("Failed to load messages from localStorage:", error);
     return { messages: [], durations: {} };
   }
 };
 
-const saveMessagesToStorage = (messages: UIMessage[], durations: Record<string, number>) => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ messages, durations }));
+const saveMessagesToStorage = (
+  messages: UIMessage[],
+  durations: Record<string, number>
+) => {
+  if (typeof window === "undefined") return;
+  try {
+    const data: StorageData = { messages, durations };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (error) {
+    console.error("Failed to save messages to localStorage:", error);
+  }
 };
 
+// ----------------- quick-start questions -----------------
 
-// ------------------------------
-// HERO CONTENT (STATIC TEXT)
-// ------------------------------
-const helpPoints = [
-  "SEO & local search visibility for your shop/service",
-  "Instagram & Facebook content calendars that fit your budget",
-  "Simple email & WhatsApp campaigns to nurture customers",
-  "Easy paid ads for small budgets (Google, Meta, etc.)",
+const QUICK_START_QUESTIONS: { label: string; text: string }[] = [
+  {
+    label: "Create a 1-week Instagram plan for my bakery",
+    text: "Create a detailed 1-week Instagram content plan for my neighborhood bakery, including post ideas, captions, and basic hashtags. Focus only on digital marketing tactics.",
+  },
+  {
+    label: "Use a ₹10,000 digital marketing budget wisely",
+    text: "I have a ₹10,000 monthly DIGITAL MARKETING budget for my small business. Propose a split across online channels like paid ads, social media content, email/WhatsApp marketing, and SEO, with clear percentages and reasoning.",
+  },
+  {
+    label: "Write a welcome email for new customers",
+    text: "Write a warm, friendly welcome email for new customers who joined my email list after seeing my online ads or social media posts. Keep it short and marketing-focused.",
+  },
+  {
+    label: "Give me 5 post ideas for my café’s Google Business Profile",
+    text: "Give me 5 post ideas for my café’s (Google Business Profile), a local café to increase visits, reviews, and online visibility. Focus only on digital marketing ideas.",
+  },
 ];
 
-const heroQuestions = [
-  "1-week Instagram plan for my business",
-  "Spend ₹10k/month on marketing wisely",
-  "SEO vs Ads for my local business",
-  "Get more Google reviews & visibility",
-];
+// ----------------- main component -----------------
 
-const quickActions = [
-  "Create a 1-week Instagram plan for my bakery",
-  "Plan a ₹10,000 digital marketing budget for my small business",
-  "Write a welcome email for new customers",
-  "Give me 5 post ideas for my café’s Google Business Profile"
-];
-
-
-// ------------------------------
-// COMPONENT STARTS
-// ------------------------------
 export default function Chat() {
   const [isClient, setIsClient] = useState(false);
   const [durations, setDurations] = useState<Record<string, number>>({});
-  const [hasUserMsg, setHasUserMsg] = useState(false);
+  const welcomeMessageShownRef = useRef<boolean>(false);
 
-  const stored = typeof window !== 'undefined' ? loadMessagesFromStorage() : { messages: [], durations: {} };
+  const stored =
+    typeof window !== "undefined"
+      ? loadMessagesFromStorage()
+      : { messages: [], durations: {} };
+
   const [initialMessages] = useState<UIMessage[]>(stored.messages);
 
   const { messages, sendMessage, status, stop, setMessages } = useChat({
     messages: initialMessages,
   });
 
-  // On mount
   useEffect(() => {
     setIsClient(true);
     setDurations(stored.durations);
     setMessages(stored.messages);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Track when user sends first message → hide quick-actions
-  useEffect(() => {
-    const userHasSent = messages.some((m) => m.role === "user");
-    setHasUserMsg(userHasSent);
-  }, [messages]);
-
-  // Sync to localStorage
   useEffect(() => {
     if (isClient) {
       saveMessagesToStorage(messages, durations);
     }
-  }, [messages, durations, isClient]);
+  }, [durations, messages, isClient]);
 
-
-  const handleDurationChange = (id: string, duration: number) => {
-    setDurations((d) => ({ ...d, [id]: duration }));
+  const handleDurationChange = (key: string, duration: number) => {
+    setDurations((prev) => ({ ...prev, [key]: duration }));
   };
 
+  // initial assistant message
+  useEffect(() => {
+    if (
+      isClient &&
+      initialMessages.length === 0 &&
+      !welcomeMessageShownRef.current
+    ) {
+      const welcomeMessage: UIMessage = {
+        id: `welcome-${Date.now()}`,
+        role: "assistant",
+        parts: [
+          {
+            type: "text",
+            text: WELCOME_MESSAGE,
+          },
+        ],
+      };
+      setMessages([welcomeMessage]);
+      saveMessagesToStorage([welcomeMessage], {});
+      welcomeMessageShownRef.current = true;
+    }
+  }, [isClient, initialMessages.length, setMessages]);
 
-  // ------------------------------
-  // FORM SETUP
-  // ------------------------------
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { message: "" },
+    defaultValues: {
+      message: "",
+    },
   });
 
   function onSubmit(data: z.infer<typeof formSchema>) {
+    if (!data.message.trim()) return;
     sendMessage({ text: data.message });
     form.reset();
   }
 
   function clearChat() {
-    setMessages([]);
-    setDurations({});
-    saveMessagesToStorage([], {});
+    const newMessages: UIMessage[] = [];
+    const newDurations: Record<string, number> = {};
+    setMessages(newMessages);
+    setDurations(newDurations);
+    saveMessagesToStorage(newMessages, newDurations);
     toast.success("Chat cleared");
-    setHasUserMsg(false);
   }
 
+  function handleQuickQuestion(text: string) {
+    sendMessage({ text });
+  }
 
-  // ------------------------------
-  // RENDER
-  // ------------------------------
+  const hasUserMessages = messages.some((m) => m.role === "user");
+
   return (
     <div className="flex h-screen items-center justify-center font-sans dark:bg-black">
       <main className="w-full dark:bg-black h-screen relative">
-
-        {/* ---------------- TOP HEADER ---------------- */}
-        <div className="fixed top-0 left-0 right-0 z-50 bg-background/80 dark:bg-black backdrop-blur-xl pb-4">
-          <ChatHeader>
-            <ChatHeaderBlock />
-            <ChatHeaderBlock className="justify-center items-center">
-              <Avatar className="size-8 ring-1 ring-primary">
-                <AvatarImage src="/logo.png" />
-                <AvatarFallback>
-                  <Image src="/logo.png" alt="Logo" width={36} height={36} />
-                </AvatarFallback>
-              </Avatar>
-              <p className="tracking-tight">Chat with {AI_NAME}</p>
-            </ChatHeaderBlock>
-            <ChatHeaderBlock className="justify-end">
-              <Button variant="outline" size="sm" onClick={clearChat}>
-                {CLEAR_CHAT_TEXT}
-              </Button>
-            </ChatHeaderBlock>
-          </ChatHeader>
+        {/* Top header (scrolls away, not fixed) */}
+        <div className="w-full bg-background dark:bg-black border-b border-border/40">
+          <div className="relative overflow-visible py-3">
+            <ChatHeader>
+              <ChatHeaderBlock />
+              <ChatHeaderBlock className="justify-center items-center gap-3">
+                <Avatar className="size-9 ring-2 ring-primary/70 shadow-sm">
+                  <AvatarImage src="/logo.png" />
+                  <AvatarFallback>
+                    <Image src="/logo.png" alt="Logo" width={36} height={36} />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col leading-tight">
+                  <p className="tracking-tight font-semibold">
+                    Chat with {AI_NAME}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Digital Marketing Copilot for Small Businesses
+                  </p>
+                </div>
+              </ChatHeaderBlock>
+              <ChatHeaderBlock className="justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="cursor-pointer gap-1"
+                  onClick={clearChat}
+                >
+                  <Plus className="size-4" />
+                  {CLEAR_CHAT_TEXT}
+                </Button>
+              </ChatHeaderBlock>
+            </ChatHeader>
+          </div>
         </div>
 
-        {/* ---------------- MAIN SCROLL AREA ---------------- */}
-        <div className="h-screen overflow-y-auto px-5 py-4 w-full pt-[100px] pb-[150px]">
-
-          {/* ---------------- HERO SECTION (only before chatting) ---------------- */}
-          {isClient && !hasUserMsg && (
-            <section className="w-full flex justify-center mb-5">
-              <div className="max-w-4xl w-full rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
-                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-10">
-
-                  {/* LEFT SIDE */}
-                  <div className="flex-1 space-y-3">
-                    <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
-                      MyAI3 – Digital Marketing Copilot for Small Businesses
-                    </h1>
-                    <p className="text-sm md:text-base text-muted-foreground">
-                      Practical, step-by-step help for online marketing — based on books,
-                      reports, and trend studies for small and local businesses.
-                    </p>
-
-                    <p className="font-semibold">I can help you with:</p>
-                    <ul className="space-y-1.5">
-                      {helpPoints.map((p) => (
-                        <li key={p} className="flex items-start gap-2 text-muted-foreground text-sm">
-                          <span className="mt-1 h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-                          <span>{p}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* RIGHT SIDE */}
-                  <div className="w-full md:w-80 space-y-2">
-                    <p className="font-semibold">Great first questions:</p>
-                    <ul className="space-y-1.5">
-                      {heroQuestions.map((q) => (
-                        <li key={q} className="flex gap-2 text-muted-foreground text-sm">
-                          <span className="mt-1 h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-                          <span className="whitespace-nowrap">{q}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
+        {/* Scrollable content */}
+        <div className="h-screen overflow-y-auto px-5 py-4 w-full pt-6 pb-[170px] bg-gradient-to-b from-background via-background to-muted/40">
+          <div className="flex flex-col items-center justify-start min-h-full gap-6">
+            {/* Hero / marketing card */}
+            <section className="w-full max-w-3xl">
+              <div className="bg-card border border-border/60 rounded-3xl shadow-sm px-6 sm:px-8 py-6 sm:py-7 space-y-4">
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
+                    MyAI3 – Digital Marketing Copilot for Small Businesses
+                  </h1>
+                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                    Get practical, step-by-step help with your online marketing.
+                    I’m trained on books, reports, and trend studies about
+                    digital marketing – especially for small and local
+                    businesses.
+                  </p>
                 </div>
+
+                <div className="grid gap-4 sm:grid-cols-2 text-sm">
+                  <div>
+                    <h2 className="font-semibold mb-1.5">I can help you with:</h2>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                      <li>SEO &amp; local search visibility</li>
+                      <li>Instagram &amp; Facebook content calendars</li>
+                      <li>Email and WhatsApp campaigns</li>
+                      <li>Simple paid ads for small budgets</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h2 className="font-semibold mb-1.5">
+                      Great first questions:
+                    </h2>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                      <li>
+                        Create a 1-week Instagram plan for my small business
+                      </li>
+                      <li>
+                        How should I use a ₹10k/month digital marketing budget?
+                      </li>
+                      <li>
+                        Explain SEO vs. running online ads for my business
+                      </li>
+                      <li>
+                        Ideas to get more Google reviews and online visibility
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                {!hasUserMessages && (
+                  <p className="text-xs text-muted-foreground pt-1">
+                    Tip: Click one of the suggestions below, or ask in simple
+                    language like you’re texting a friend. Everything is focused
+                    on digital marketing.
+                  </p>
+                )}
               </div>
             </section>
-          )}
 
-          {/* ---------------- QUICK ACTION CHIPS (hide after first msg) ---------------- */}
-          {isClient && !hasUserMsg && (
-            <div className="w-full flex flex-wrap justify-center gap-2 mb-5">
-              {quickActions.map((a) => (
-                <Button
-                  key={a}
-                  variant="outline"
-                  className="rounded-full"
-                  onClick={() => {
-                    sendMessage({ text: a });
-                    setHasUserMsg(true);
-                  }}
-                >
-                  {a}
-                </Button>
-              ))}
-            </div>
-          )}
-
-          {/* ---------------- MESSAGE WALL ---------------- */}
-          <div className="flex justify-center">
-            <MessageWall
-              messages={messages}
-              status={status}
-              durations={durations}
-              onDurationChange={handleDurationChange}
-            />
-          </div>
-
-          {status === "submitted" && (
-            <div className="flex justify-start max-w-3xl w-full">
-              <Loader2 className="size-4 animate-spin text-muted-foreground" />
-            </div>
-          )}
-        </div>
-
-        {/* ---------------- CHAT INPUT SECTION ---------------- */}
-        <div className="fixed bottom-0 left-0 right-0 bg-background/80 dark:bg-black backdrop-blur-xl pt-6 pb-3 px-5 z-50">
-          <div className="max-w-3xl mx-auto w-full">
-            <form id="chat-form" onSubmit={form.handleSubmit(onSubmit)}>
-              <FieldGroup>
-                <Controller
-                  name="message"
-                  control={form.control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor="chat-form-message" className="sr-only">
-                        Message
-                      </FieldLabel>
-                      <div className="relative">
-                        <Input
-                          {...field}
-                          id="chat-form-message"
-                          className="h-15 pr-16 pl-5 bg-card rounded-[20px]"
-                          placeholder="Ask me anything about your small-business marketing (SEO, Instagram, ads, email)…"
-                          disabled={status === "streaming"}
-                          autoComplete="off"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                              e.preventDefault();
-                              form.handleSubmit(onSubmit)();
-                            }
-                          }}
-                        />
-                        {(status === "ready" || status === "error") && (
-                          <Button
-                            type="submit"
-                            disabled={!field.value.trim()}
-                            size="icon"
-                            className="absolute right-3 top-3 rounded-full"
-                          >
-                            <ArrowUp className="size-4" />
-                          </Button>
-                        )}
-                        {status === "streaming" && (
-                          <Button
-                            size="icon"
-                            onClick={stop}
-                            className="absolute right-3 top-3 rounded-full"
-                          >
-                            <Square className="size-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </Field>
+            {/* Messages */}
+            <section className="w-full max-w-3xl flex flex-col gap-3">
+              {isClient ? (
+                <>
+                  <MessageWall
+                    messages={messages}
+                    status={status}
+                    durations={durations}
+                    onDurationChange={handleDurationChange}
+                  />
+                  {status === "submitted" && (
+                    <div className="flex justify-start max-w-3xl w-full">
+                      <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                    </div>
                   )}
-                />
-              </FieldGroup>
-            </form>
-
-            <div className="w-full py-2 text-center text-xs text-muted-foreground">
-              © {new Date().getFullYear()} {OWNER_NAME} — Powered by{" "}
-              <Link href="https://ringel.ai/" className="underline">
-                Ringel.AI
-              </Link>
-            </div>
+                </>
+              ) : (
+                <div className="flex justify-center max-w-2xl w-full py-4">
+                  <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                </div>
+              )}
+            </section>
           </div>
         </div>
 
+        {/* Input + quick-start buttons */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-linear-to-t from-background via-background/70 to-transparent dark:bg-black overflow-visible pt-4">
+          <div className="w-full px-5 pb-2 flex flex-col items-center gap-3 relative overflow-visible">
+            <div className="message-fade-overlay" />
+
+            {/* Quick-start chips – only BEFORE first user message */}
+            {!hasUserMessages && (
+              <div className="max-w-3xl w-full flex flex-wrap gap-2 justify-center mb-1">
+                {QUICK_START_QUESTIONS.map((q) => (
+                  <Button
+                    key={q.label}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full text-xs sm:text-[13px] px-3 py-1 h-auto whitespace-normal leading-snug"
+                    onClick={() => handleQuickQuestion(q.text)}
+                    disabled={status === "streaming" || status === "submitted"}
+                  >
+                    {q.label}
+                  </Button>
+                ))}
+              </div>
+            )}
+
+            {/* Input bar */}
+            <div className="max-w-3xl w-full">
+              <form id="chat-form" onSubmit={form.handleSubmit(onSubmit)}>
+                <FieldGroup>
+                  <Controller
+                    name="message"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                      <Field data-invalid={fieldState.invalid}>
+                        <FieldLabel
+                          htmlFor="chat-form-message"
+                          className="sr-only"
+                        >
+                          Message
+                        </FieldLabel>
+                        <div className="relative h-13">
+                          <Input
+                            {...field}
+                            id="chat-form-message"
+                            className="h-15 pr-15 pl-5 bg-card rounded-[20px] shadow-sm border border-border/70"
+                            placeholder="Ask me anything about your small business DIGITAL marketing (SEO, social, ads, email)…"
+                            disabled={status === "streaming"}
+                            aria-invalid={fieldState.invalid}
+                            autoComplete="off"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                form.handleSubmit(onSubmit)();
+                              }
+                            }}
+                          />
+                          {(status === "ready" || status === "error") && (
+                            <Button
+                              className="absolute right-3 top-3 rounded-full"
+                              type="submit"
+                              disabled={!field.value.trim()}
+                              size="icon"
+                            >
+                              <ArrowUp className="size-4" />
+                            </Button>
+                          )}
+                          {(status === "streaming" ||
+                            status === "submitted") && (
+                            <Button
+                              className="absolute right-2 top-2 rounded-full"
+                              size="icon"
+                              type="button"
+                              onClick={() => {
+                                stop();
+                              }}
+                            >
+                              <Square className="size-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </Field>
+                    )}
+                  />
+                </FieldGroup>
+              </form>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="w-full px-5 py-3 items-center flex justify-center text-xs text-muted-foreground bg-background/80 backdrop-blur">
+            © {new Date().getFullYear()} {OWNER_NAME}&nbsp;
+            <Link href="/terms" className="underline">
+              Terms of Use
+            </Link>
+            &nbsp;Powered by&nbsp;
+            <Link href="https://ringel.ai/" className="underline">
+              Ringel.AI
+            </Link>
+          </div>
+        </div>
       </main>
     </div>
   );
