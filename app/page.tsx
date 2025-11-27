@@ -355,7 +355,7 @@ export default function Chat() {
                           </div>
                         </div>
                         <h1 className="text-lg sm:text-xl font-black tracking-tight bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 dark:from-white dark:via-gray-100 dark:to-gray-300 bg-clip-text text-transparent leading-tight">
-                          MyAI3 – Digital Marketing Copilot
+                          DigiSarthi – Digital Marketing Copilot
                         </h1>
                         <p className="text-xs font-semibold text-primary dark:text-primary/90 mt-0.5">
                           For Small Businesses
