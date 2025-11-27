@@ -517,13 +517,14 @@ export default function Chat() {
                             {...field}
                             ref={inputRef}
                             id="chat-form-message"
-                            className="h-12 pr-16 pl-5 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-[20px] shadow-xl border-2 border-gray-300/60 dark:border-gray-600/60 focus:border-primary/60 dark:focus:border-primary/50 focus:shadow-primary/20 dark:focus:shadow-primary/30 transition-all duration-300 hover:shadow-xl hover:border-primary/40 dark:hover:border-primary/40 text-sm font-medium placeholder:text-gray-500 dark:placeholder:text-gray-400 !text-gray-900 dark:!text-white [&:not(:placeholder-shown)]:text-gray-900 [&:not(:placeholder-shown)]:dark:text-white"
+                            className="h-12 pr-16 pl-5 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-[20px] shadow-xl border-2 border-gray-300/60 dark:border-gray-600/60 focus:border-primary/60 dark:focus:border-primary/50 focus:shadow-primary/20 dark:focus:shadow-primary/30 transition-all duration-300 hover:shadow-xl hover:border-primary/40 dark:hover:border-primary/40 text-sm font-medium"
                             placeholder="Ask about digital marketing (SEO, social, ads, email)…"
                             disabled={false}
                             aria-invalid={fieldState.invalid}
                             autoComplete="off"
                             style={{
-                              color: theme === 'dark' ? '#ffffff' : '#111827'
+                              color: theme === 'dark' ? '#ffffff !important' : '#111827 !important',
+                              WebkitTextFillColor: theme === 'dark' ? '#ffffff' : '#111827',
                             }}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && !e.shiftKey) {
