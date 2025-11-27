@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useChat } from "@ai-sdk/react";
-import { ArrowUp, Loader2, Plus, Square, Sparkles, Moon, Sun, Zap, Shield, TrendingUp, User, Mic } from "lucide-react";
+import { ArrowUp, Loader2, Plus, Square, Sparkles, Moon, Sun, Zap, Shield, TrendingUp } from "lucide-react";
 import { MessageWall } from "@/components/messages/message-wall";
 import { ChatHeader, ChatHeaderBlock } from "@/app/parts/chat-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -256,9 +256,7 @@ export default function Chat() {
     <div className={`flex h-screen items-center justify-center font-sans transition-colors duration-300 relative overflow-hidden ${theme === "dark" ? "dark bg-gray-950" : "bg-white"}`}>
       
       {/* ---------------- NEW: Background Grid Pattern ---------------- */}
-      {/* This adds the professional "Tech/SaaS" look with a subtle grid that fades out */}
       <div className="absolute inset-0 z-0 h-full w-full bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%) pointer-events-none"></div>
-      {/* ---------------------------------------------------------------- */}
 
       <main className="w-full h-screen relative flex flex-col z-10">
         {/* Compact Fixed Header */}
@@ -362,21 +360,6 @@ export default function Chat() {
                         <p className="text-xs font-semibold text-primary dark:text-primary/90 mt-0.5">
                           For Small Businesses
                         </p>
-                        
-                        {/* ---------------- NEW: Identity Badges ---------------- */}
-                        {/* These help with the Identity rubric (Role & Tone) */}
-                        <div className="flex gap-2 mt-2 flex-wrap">
-                          <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-[10px] font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 dark:bg-blue-900/30 dark:text-blue-300 dark:ring-blue-500/30">
-                            <User className="size-3" />
-                            Role: Senior Marketer
-                          </span>
-                          <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-1 text-[10px] font-medium text-purple-700 ring-1 ring-inset ring-purple-700/10 dark:bg-purple-900/30 dark:text-purple-300 dark:ring-purple-500/30">
-                            <Mic className="size-3" />
-                            Tone: Strategic & Actionable
-                          </span>
-                        </div>
-                        {/* ------------------------------------------------------ */}
-
                       </div>
                       <TrendingUp className="size-6 text-primary/40 dark:text-primary/30 animate-pulse hidden sm:block flex-shrink-0" />
                     </div>
