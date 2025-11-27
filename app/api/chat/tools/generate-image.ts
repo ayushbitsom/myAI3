@@ -11,7 +11,8 @@ export const generateImage = tool({
   parameters: z.object({
     prompt: z.string().describe('The detailed visual description of the image to generate. Rewrite the user request to be descriptive, specifying style, lighting, and composition.'),
   }),
-  execute: async ({ prompt }) => {
+  // FIX: We explicitly tell TypeScript that 'prompt' is a string
+  execute: async ({ prompt }: { prompt: string }) => {
     try {
       const response = await openai.images.generate({
         model: "dall-e-3",
