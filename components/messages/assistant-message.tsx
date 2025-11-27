@@ -8,12 +8,8 @@ import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 
-/**
- * A sub-component to handle the text part of the message
- */
-function AssistantTextPart({ text, isStreaming }: { text: string; isStreaming: boolean }) {
+function AssistantTextPart({ text, isStreaming, isWelcome }: { text: string; isStreaming: boolean; isWelcome: boolean }) {
     const [isCopied, setIsCopied] = useState(false);
-
     const handleCopy = () => {
         if (!text) return;
         navigator.clipboard.writeText(text);
@@ -21,31 +17,15 @@ function AssistantTextPart({ text, isStreaming }: { text: string; isStreaming: b
         toast.success("Copied to clipboard");
         setTimeout(() => setIsCopied(false), 2000);
     };
+    const showCopyButton = !isStreaming && !isWelcome && text.length > 5;
 
     return (
         <div className="group relative w-full">
-            {/* The Markdown Text Response */}
             <Response>{text}</Response>
-
-            {/* Copy Button - Only visible when not streaming and text is long enough */}
-            {!isStreaming && text.length > 5 && (
+            {showCopyButton && (
                 <div className="mt-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300 ease-in-out">
-                    <button
-                        onClick={handleCopy}
-                        className="flex items-center gap-1.5 text-[10px] font-medium text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary transition-colors bg-gray-50 dark:bg-gray-800/50 px-2.5 py-1.5 rounded-md border border-gray-200 dark:border-gray-700/50 hover:border-primary/30 hover:shadow-sm"
-                        title="Copy to clipboard"
-                    >
-                        {isCopied ? (
-                            <>
-                                <Check className="size-3 text-green-500" />
-                                <span className="text-green-600 dark:text-green-400">Copied</span>
-                            </>
-                        ) : (
-                            <>
-                                <Copy className="size-3" />
-                                <span>Copy</span>
-                            </>
-                        )}
+                    <button onClick={handleCopy} className="flex items-center gap-1.5 text-[10px] font-medium text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary transition-colors bg-gray-50 dark:bg-gray-800/50 px-2.5 py-1.5 rounded-md border border-gray-200 dark:border-gray-700/50 hover:border-primary/30 hover:shadow-sm">
+                        {isCopied ? <><Check className="size-3 text-green-500" /><span className="text-green-600 dark:text-green-400">Copied</span></> : <><Copy className="size-3" /><span>Copy</span></>}
                     </button>
                 </div>
             )}
@@ -54,6 +34,7 @@ function AssistantTextPart({ text, isStreaming }: { text: string; isStreaming: b
 }
 
 export function AssistantMessage({ message, status, isLastMessage, durations, onDurationChange }: { message: UIMessage; status?: string; isLastMessage?: boolean; durations?: Record<string, number>; onDurationChange?: (key: string, duration: number) => void }) {
+    const isWelcome = message.id.startsWith("welcome-");
     return (
         <div className="w-full">
             <div className="text-sm flex flex-col gap-4">
@@ -63,41 +44,30 @@ export function AssistantMessage({ message, status, isLastMessage, durations, on
                     const duration = durations?.[durationKey];
 
                     if (part.type === "text") {
-                        // Use our new clean text component
-                        return (
-                            <AssistantTextPart 
-                                key={`${message.id}-${i}`} 
-                                text={part.text} 
-                                isStreaming={!!isStreaming} 
-                            />
-                        );
+                        return <AssistantTextPart key={`${message.id}-${i}`} text={part.text} isStreaming={!!isStreaming} isWelcome={isWelcome} />;
                     } else if (part.type === "reasoning") {
-                        return (
-                            <ReasoningPart
-                                key={`${message.id}-${i}`}
-                                part={part}
-                                isStreaming={isStreaming}
-                                duration={duration}
-                                onDurationChange={onDurationChange ? (d) => onDurationChange(durationKey, d) : undefined}
-                            />
-                        );
-                    } else if (
-                        part.type.startsWith("tool-") || part.type === "dynamic-tool"
-                    ) {
+                        return <ReasoningPart key={`${message.id}-${i}`} part={part} isStreaming={isStreaming} duration={duration} onDurationChange={onDurationChange ? (d) => onDurationChange(durationKey, d) : undefined} />;
+                    } else if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
                         if ('state' in part && part.state === "output-available") {
-                            return (
-                                <ToolResult
-                                    key={`${message.id}-${i}`}
-                                    part={part as unknown as ToolResultPart}
-                                />
-                            );
+                            // SHOW IMAGE LOGIC
+                            if (part.toolName === 'generateImage') {
+                                const result = part.result as { imageUrl: string, promptUsed: string, error?: string };
+                                if (result.error) return <div className="text-red-500 text-xs bg-red-50 p-2 rounded">{result.error}</div>;
+                                return (
+                                    <div key={`${message.id}-${i}`} className="my-2 group">
+                                        <div className="relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 max-w-sm shadow-md transition-all hover:shadow-lg">
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img src={result.imageUrl} alt={result.promptUsed} className="w-full h-auto object-cover aspect-square" loading="lazy" />
+                                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <p className="text-[10px] text-white/90 line-clamp-2">{result.promptUsed}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            return null; // Hide other tools
                         } else {
-                            return (
-                                <ToolCall
-                                    key={`${message.id}-${i}`}
-                                    part={part as unknown as ToolCallPart}
-                                />
-                            );
+                            return <ToolCall key={`${message.id}-${i}`} part={part as unknown as ToolCallPart} />;
                         }
                     }
                     return null;
